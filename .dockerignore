@@ -1,0 +1,14 @@
+.venv
+.env
+.git
+.idea
+.pytest_cache
+__pycache__
+data/cache
+data/app.db*
+data/state.db*
+evals/results.md
+data/raw/
+data/wdi.db*
+data/vector_index.json
+docs

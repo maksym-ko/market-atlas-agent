@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+.idea
+.env
+.pytest_cache/
+data/cache/
+data/app.db*
+data/state.db*
+.nicegui/
+data/raw/
+data/wdi.db*
+data/vector_index.json
+data/docs.jsonl

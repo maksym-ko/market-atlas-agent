@@ -1,0 +1,20 @@
+name: CI
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --frozen
+      - name: Tests (no API keys needed)
+        run: uv run pytest -q
+      - name: Security lint (bandit)
+        run: uvx bandit -q -r app servers -ll
+      - name: Dependency audit (pip-audit)
+        run: |
+          uv export --no-dev --format requirements-txt --no-hashes -q > req.txt
+          uvx pip-audit -r req.txt --no-deps --disable-pip
+      - name: Docker image builds
+        run: docker build -t market-atlas .

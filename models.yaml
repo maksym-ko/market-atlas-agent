@@ -1,0 +1,43 @@
+# privacy_mode: strict = only models that don't log or train on prompts (zdr, no_log_no_train, local)
+#               demo   = anything (World Bank data is public)
+privacy_mode: demo
+default: local   # runs on this machine via Ollama (`make ollama`); no key, no rate limits
+models:
+  claude-haiku-4.5:
+    label: Claude Haiku 4.5
+    provider: anthropic
+    model: claude-haiku-4-5-20251001
+    privacy: no_train          # change to zdr if your org has a Zero Data Retention agreement
+  # Local models via Ollama (`make ollama` pulls them). Nothing leaves the machine; allowed in strict mode.
+  # num_ctx: the system prompt + 12 tool schemas + tool results need more than Ollama's small default.
+  # reasoning: false skips qwen3's thinking step (faster; set true for harder questions).
+  local:
+    label: Qwen3 8B (local, Ollama)
+    provider: ollama
+    model: qwen3:8b
+    privacy: local
+    num_ctx: 16384
+    reasoning: false
+  # Free OpenRouter models (privacy: may_log -> allowed only in demo mode; World Bank data is public).
+  # Slugs from openrouter.ai/api/v1/models, filtered to ":free" models that list "tools".
+  nemotron-3.5-lightning:
+    label: Nemotron 3.5 Lightning (free)
+    provider: openrouter
+    model: nvidia/nemotron-3.5-lightning:free
+    privacy: may_log
+  nemotron-3-super-120b:
+    label: Nemotron 3 Super 120B (free)
+    provider: openrouter
+    model: nvidia/nemotron-3-super-120b-a12b:free
+    privacy: may_log
+  gemma-4-31b:
+    label: Gemma 4 31B (free)
+    provider: openrouter
+    model: google/gemma-4-31b-it:free
+    privacy: may_log
+  inkling-small:
+    label: Inkling Small (free)
+    provider: openrouter
+    model: thinkingmachines/inkling-small:free
+    privacy: may_log
+    enabled: false   # 403: only available in agentic harnesses

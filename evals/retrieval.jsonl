@@ -1,0 +1,45 @@
+{"query": "trees covering land", "expected": ["AG.LND.FRST.ZS"]}
+{"query": "how many people live in cities", "expected": ["SP.URB.TOTL.IN.ZS", "SP.URB.TOTL"]}
+{"query": "babies dying before age one", "expected": ["SP.DYN.IMRT.IN"]}
+{"query": "how long people live", "expected": ["SP.DYN.LE00.IN"]}
+{"query": "kids per woman", "expected": ["SP.DYN.TFRT.IN"]}
+{"query": "jobless rate", "expected": ["SL.UEM.TOTL.ZS", "SL.UEM.TOTL.NE.ZS"]}
+{"query": "youth without jobs", "expected": ["SL.UEM.1524.ZS", "SL.UEM.1524.NE.ZS"]}
+{"query": "carbon emissions per person", "expected": ["EN.GHG.CO2.PC.CE.AR5"]}
+{"query": "price rises for consumers", "expected": ["FP.CPI.TOTL.ZG"]}
+{"query": "money sent home by migrants", "expected": ["BX.TRF.PWKR.CD.DT", "BX.TRF.PWKR.DT.GD.ZS"]}
+{"query": "mobile phone subscriptions", "expected": ["IT.CEL.SETS.P2", "IT.CEL.SETS"]}
+{"query": "share of people online", "expected": ["IT.NET.USER.ZS"]}
+{"query": "electricity access in villages", "expected": ["EG.ELC.ACCS.RU.ZS"]}
+{"query": "power from renewables", "expected": ["EG.ELC.RNEW.ZS", "EG.FEC.RNEW.ZS"]}
+{"query": "adult reading ability", "expected": ["SE.ADT.LITR.ZS"]}
+{"query": "kids finishing primary school", "expected": ["SE.PRM.CMPT.ZS"]}
+{"query": "government spending on schools", "expected": ["SE.XPD.TOTL.GD.ZS", "SE.XPD.TOTL.GB.ZS"]}
+{"query": "health spending per person", "expected": ["SH.XPD.CHEX.PC.CD", "SH.XPD.CHEX.PP.CD"]}
+{"query": "mothers dying in childbirth", "expected": ["SH.STA.MMRT", "SH.STA.MMRT.NE"]}
+{"query": "foreign companies investing", "expected": ["BX.KLT.DINV.WD.GD.ZS", "BX.KLT.DINV.CD.WD"]}
+{"query": "exports as share of economy", "expected": ["NE.EXP.GNFS.ZS"]}
+{"query": "how much a country owes abroad", "expected": ["DT.DOD.DECT.CD", "DT.DOD.DECT.GN.ZS"]}
+{"query": "government debt", "expected": ["GC.DOD.TOTL.GD.ZS"]}
+{"query": "tax take", "expected": ["GC.TAX.TOTL.GD.ZS"]}
+{"query": "military budget", "expected": ["MS.MIL.XPND.GD.ZS", "MS.MIL.XPND.CD"]}
+{"query": "women in parliament", "expected": ["SG.GEN.PARL.ZS"]}
+{"query": "people living in extreme poverty", "expected": ["SI.POV.DDAY"]}
+{"query": "inequality between rich and poor", "expected": ["SI.POV.GINI"]}
+{"query": "air pollution particles", "expected": ["EN.ATM.PM25.MC.M3"]}
+{"query": "clean drinking water", "expected": ["SH.H2O.SMDW.ZS", "SH.H2O.BASW.ZS"]}
+{"query": "tourists arriving", "expected": ["ST.INT.ARVL"]}
+{"query": "farm land", "expected": ["AG.LND.AGRI.ZS", "AG.LND.AGRI.K2"]}
+{"query": "income per person", "expected": ["NY.GDP.PCAP.CD", "NY.GNP.PCAP.CD", "NY.GDP.PCAP.PP.CD"]}
+{"query": "CO2 emissions per capita", "expected": ["EN.GHG.CO2.PC.CE.AR5"]}
+{"query": "GDP per capita PPP", "expected": ["NY.GDP.PCAP.PP.CD", "NY.GDP.PCAP.PP.KD"]}
+{"query": "Gini index", "expected": ["SI.POV.GINI"]}
+{"query": "broad money M2", "expected": ["FM.LBL.BMNY.GD.ZS", "FM.LBL.BMNY.CN"]}
+{"query": "FDI net inflows % of GDP", "expected": ["BX.KLT.DINV.WD.GD.ZS"]}
+{"query": "SL.UEM.TOTL.ZS", "expected": ["SL.UEM.TOTL.ZS"]}
+{"query": "PM2.5 air pollution", "expected": ["EN.ATM.PM25.MC.M3"]}
+{"query": "ODA received", "expected": ["DT.ODA.ODAT.CD", "DT.ODA.ODAT.GN.ZS", "DT.ODA.ALLD.CD"]}
+{"query": "R&D expenditure % of GDP", "expected": ["GB.XPD.RSDV.GD.ZS"]}
+{"query": "HIV prevalence", "expected": ["SH.DYN.AIDS.ZS"]}
+{"query": "GNI per capita Atlas method", "expected": ["NY.GNP.PCAP.CD"]}
+{"query": "NEET youth", "expected": ["SL.UEM.NEET.ZS", "SL.UEM.NEET.ME.ZS"]}

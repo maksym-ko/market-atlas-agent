@@ -1,0 +1,12 @@
+{"query": "How is GDP per capita calculated?", "expected_prefix": "ind:NY.GDP.PCAP.CD:"}
+{"query": "What are the limitations of the extreme poverty headcount ratio?", "expected_prefix": "ind:SI.POV.DDAY:lim"}
+{"query": "How is life expectancy at birth estimated?", "expected_prefix": "ind:SP.DYN.LE00.IN:"}
+{"query": "Where does the unemployment rate data come from?", "expected_prefix": "ind:SL.UEM.TOTL.ZS:"}
+{"query": "What does the Gini index measure?", "expected_prefix": "ind:SI.POV.GINI:"}
+{"query": "When was Ukraine's latest population census?", "expected_prefix": "cty:UKR"}
+{"query": "Which System of National Accounts does Poland use?", "expected_prefix": "cty:POL"}
+{"query": "Where do Ukraine's military expenditure figures come from?", "expected_prefix": "note:UKR"}
+{"query": "Are Ukraine's national accounts based on statistics of Ukraine and the Russian Federation?", "expected_prefix": "note:UKR"}
+{"query": "What are the limitations of internet user statistics?", "expected_prefix": "ind:IT.NET.USER.ZS:lim"}
+{"query": "How is consumer price inflation measured?", "expected_prefix": "ind:FP.CPI.TOTL.ZG:"}
+{"query": "Why does access to electricity matter for development?", "expected_prefix": "ind:EG.ELC.ACCS.ZS:dev"}
