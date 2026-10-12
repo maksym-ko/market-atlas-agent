@@ -17,7 +17,7 @@ make data                # World Bank snapshot + indicator catalog (~20 s)
 make wdi                 # optional: full World Bank dataset, ~9M values (283 MB download, ~15 s load)
 make index               # optional: upload indicators to Pinecone for semantic search (PINECONE_API_KEY)
 make index-docs          # optional: World Bank methodology passages for chat Q&A (after make wdi)
-make test                # 66 tests, no API calls
+make test                # 68 tests, no API calls
 make ui                  # http://localhost:8080
 ```
 
@@ -260,6 +260,7 @@ GitHub Actions runs the tests, `bandit`, `pip-audit` and the Docker build on eve
 | XSS | Model output rendered through an `nh3` allowlist; no `<img>` (blocks data leaks); https links only; security headers | `tests/security` |
 | Prompt injection | Approval gate, strict argument validation, data treated as data in the system prompt | `tests/test_graph.py`, evals |
 | SSRF | Fixed base URL, validated codes, no redirects, response size limit, no URL parameters in tools | `tests/security` |
+| Invented links | A link in an answer is shown only if its URL came from a tool result; others are removed (`strip_unsourced_links`) | `tests/security` |
 | SQL injection | Parameterized queries only; the LLM never writes SQL | `tests/security` |
 | Data leaks via web search | Redaction, domain allowlist, results marked untrusted | `tests/test_research.py` |
 

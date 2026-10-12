@@ -7,7 +7,7 @@ from nicegui import ui
 
 from app import db, feedback, methodology, runtime, scoring, tracing
 from app.llm import DEFAULT_MODEL, enabled_models, explain_error
-from app.security import sanitize_html
+from app.security import sanitize_html, strip_unsourced_links
 from app.ui import maps
 from app.ui.approval import approval_card
 from app.ui.dialogs import feedback_dialog, reports_dialog
@@ -34,7 +34,7 @@ def text_of(msg) -> str:
 @ui.page("/")
 async def index():
     state = {"thread_id": uuid.uuid4().hex, "highlight": [], "model": DEFAULT_MODEL,
-             "run_id": None, "question": "", "passages": []}
+             "run_id": None, "question": "", "passages": [], "sources": []}
     try:
         scores = scoring.all_scores()
     except FileNotFoundError as e:
@@ -132,6 +132,7 @@ async def index():
                 ui.label(json.dumps(args, ensure_ascii=False)[:500]).classes("text-xs")
 
     def handle_tool_result(msg):
+        state["sources"].append(text_of(msg))  # links in answers must come from here
         try:
             data = json.loads(text_of(msg))
         except (json.JSONDecodeError, TypeError):
@@ -165,7 +166,8 @@ async def index():
                         for call in getattr(msg, "tool_calls", []):
                             add_step(call["name"], call["args"])
                         if text_of(msg).strip():
-                            add_bot_message(methodology.link_citations(text_of(msg), state["passages"]))
+                            text = methodology.link_citations(text_of(msg), state["passages"])
+                            add_bot_message(strip_unsourced_links(text, " ".join(state["sources"])))
                     elif node == "tools":
                         handle_tool_result(msg)
         return None

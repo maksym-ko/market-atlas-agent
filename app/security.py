@@ -15,6 +15,25 @@ def sanitize_html(html: str) -> str:
                      url_schemes={"https"}, link_rel="noopener noreferrer nofollow")
 
 
+URL = re.compile(r"https?://[^\s)\]>\"']+")
+MD_LINK = re.compile(r"\[([^\]]*)\]\((https?://[^\s)]+)\)")
+
+
+def strip_unsourced_links(text: str, sources: str) -> str:
+    """Drop links the model wrote itself: a URL is shown only if it appears in a tool result (`sources`).
+    A Markdown link keeps its text; a bare URL becomes "(link removed)"."""
+    def sourced(url: str) -> bool:
+        return url.rstrip(".,;") in sources
+
+    def bare(match: re.Match) -> str:
+        url = match.group(0)
+        core = url.rstrip(".,;")
+        return url if core in sources else "(link removed)" + url[len(core):]
+
+    text = MD_LINK.sub(lambda m: m.group(0) if sourced(m.group(2)) else m.group(1), text)
+    return URL.sub(bare, text)
+
+
 def clean_text(text: str, max_len: int) -> str:
     """Plain text for titles and stored summaries: strip control chars and HTML tags, cap length."""
     text = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", "", str(text))

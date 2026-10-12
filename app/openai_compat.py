@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field
 
 from app import methodology, runtime, tracing
 from app.llm import DEFAULT_MODEL, enabled_models
+from app.security import strip_unsourced_links
 
 router = APIRouter()
 APPROVE_WORDS = {"approve", "approved", "yes", "ok", "go", "go ahead", "так"}
@@ -53,10 +54,11 @@ def _thread_id(request: ChatRequest) -> str:
     return "owui-" + hashlib.sha256(f"{request.model}|{first}".encode()).hexdigest()[:24]
 
 
-def _render(new_messages) -> str:
+def _render(new_messages, sources: str = "") -> str:
     parts, passages = [], []
     for message in new_messages:
         if message.type == "tool":
+            sources += " " + _text(message.content)
             try:
                 data = json.loads(_text(message.content))
             except (json.JSONDecodeError, TypeError):
@@ -66,7 +68,8 @@ def _render(new_messages) -> str:
             if isinstance(data, dict) and data.get("passages"):
                 passages = data["passages"]
         elif message.type == "ai" and _text(message.content).strip():
-            parts.append(methodology.link_citations(_text(message.content).strip(), passages))
+            text = methodology.link_citations(_text(message.content).strip(), passages)
+            parts.append(strip_unsourced_links(text, sources))
     return "\n\n".join(parts)
 
 
@@ -83,7 +86,8 @@ async def answer(request: ChatRequest) -> str:
         out = await graph.ainvoke(Command(resume={"approved": approved, "reason": "chat reply"}), graph_config)
     else:
         out = await graph.ainvoke({"messages": [("user", last)]}, graph_config)
-    text = _render(out["messages"][before:])
+    earlier = " ".join(_text(message.content) for message in out["messages"][:before] if message.type == "tool")
+    text = _render(out["messages"][before:], earlier)
     if "__interrupt__" in out:
         pending = out["__interrupt__"][0].value["pending"]
         lines = [

