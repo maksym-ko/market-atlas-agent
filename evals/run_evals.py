@@ -136,13 +136,13 @@ async def run_case(graph, case: dict, model: str) -> dict:
         seen = set()
         for call in pool:
             args = call["args"]
-            seen |= {code.upper() for code in args.get("countries") or []}
+            seen |= set(groups.to_iso3(args.get("countries") or []))  # tools accept names and ISO2 too
             if args.get("country"):
-                seen.add(str(args["country"]).upper())
+                seen |= set(groups.to_iso3([args["country"]]))
         checks["countries"] = set(case["countries"]) <= seen
     if case.get("group"):
         expected = set(groups.resolve(case["group"]))
-        ok = any(set(code.upper() for code in call["args"].get("countries") or []) == expected for call in calls) or \
+        ok = any(set(groups.to_iso3(call["args"].get("countries") or [])) == expected for call in calls) or \
             any(str(call["args"].get("group", "")).lower() in ("eu", "european union") for call in calls)
         checks["group"] = ok
     if case.get("no_save"):
@@ -153,7 +153,8 @@ async def run_case(graph, case: dict, model: str) -> dict:
     checks["grounded"] = grounding_score >= 0.9
     return {"id": case["id"], "pass": all(checks.values()), "checks": checks, "grounding": round(grounding_score, 2),
             "ungrounded": ungrounded(answer, tool_texts)[:8], "answer": answer[:1500],
-            "seconds": round(seconds, 1), "tools_called": sorted(names)}
+            "seconds": round(seconds, 1), "tools_called": sorted(names),
+            "calls": [{"name": call["name"], "args": call["args"]} for call in calls][:12]}
 
 
 async def run_model(model: str, cases: list[dict]) -> list[dict]:
