@@ -1,18 +1,38 @@
 # market-atlas-agent
 
-A clickable world map colored by **market attractiveness**, plus an AI analyst you can chat with about any World Bank indicator. It answers with numbers, charts and sources, and nothing is saved without your approval.
+[![CI](https://github.com/maksym-ko/market-atlas-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/maksym-ko/market-atlas-agent/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)
 
-![Market attractiveness map: countries colored by score, 0–100](docs/map.png)
+A clickable world map colored by **market attractiveness**, plus an AI analyst you can chat with about any World Bank indicator. It answers with numbers, charts and sources, and nothing is saved or forecast without your approval.
 
-> [!WARNING]
-> **A demo, not a decision tool.** This app isn't production-ready, and the score is a rough first filter built from four macro indicators. It says nothing about a specific industry, competition, regulation, taxes or political risk. Deciding where to start a business, and which business, takes much deeper research than this.
+![Demo: click a country, ask a question, get a chart, approve a forecast](docs/demo.gif)
+
+**What this project demonstrates**
+
+- **An agent with a hard human-in-the-loop gate:** LangGraph pauses with `interrupt()` before saving or forecasting, whatever the prompt says, and the approval card lets you edit the assumptions.
+- **Tools over MCP:** 13 market tools and a web-research server, loaded with `langchain-mcp-adapters` and usable from Claude Desktop too.
+- **Measured RAG:** Pinecone semantic search finds the right World Bank indicator in the top 5 for 100% of test queries (keyword search: 60%); methodology answers cite the World Bank's own docs.
+- **Evals scored from traces:** tool choice, indicator, countries, citations, prompt-injection safety, and whether every number in the answer came from a tool, compared across models.
+- **Code computes, the LLM explains:** charts are built only from stored data, the model never writes URLs or SQL, and unsourced links are stripped. Security tests cover CSRF, XSS, SSRF and SQL injection.
+
+```mermaid
+flowchart LR
+    UI["NiceGUI app<br/>or Open WebUI"] --> Agent["LangGraph agent<br/>approval gate, checkpoints"]
+    Agent <--> LLM["Claude / OpenRouter / Ollama"]
+    Agent -- MCP --> Market["market server<br/>13 tools"]
+    Agent -- MCP --> Research["research server"]
+    Market --> WB["World Bank API<br/>+ WDI in SQLite"]
+    Market --> Pinecone["Pinecone<br/>indicators, methodology"]
+    Research --> Tavily["Tavily<br/>official domains only"]
+```
 
 ## Quickstart
 
 ```bash
 uv sync
-cp .env.example .env     # optional: OPENROUTER_API_KEY / ANTHROPIC_API_KEY for cloud models
-make ollama              # the default model runs locally: install https://ollama.com first
+cp .env.example .env     # add ANTHROPIC_API_KEY or OPENROUTER_API_KEY for fast cloud answers
+make ollama              # only without a key: a local model via https://ollama.com
 make data                # World Bank snapshot + indicator catalog (~20 s)
 make wdi                 # optional: full World Bank dataset, ~9M values (283 MB download, ~15 s load)
 make index               # optional: upload indicators to Pinecone for semantic search (PINECONE_API_KEY)
@@ -23,7 +43,7 @@ make ui                  # http://localhost:8080
 
 Click a country to see its score explained. Try the starter questions, for example "Compare inflation in Poland and Ukraine over the last 20 years".
 
-The default model is Qwen3 8B running locally through Ollama, see [Local models (Ollama)](#local-models-ollama). For faster answers, pick a cloud model in the header (needs `OPENROUTER_API_KEY` or `ANTHROPIC_API_KEY`), or change `default:` in `models.yaml`.
+The default model is the first one in `default:` (`models.yaml`) whose key is set: Claude Haiku 4.5, then a free OpenRouter model, then Qwen3 8B running locally through Ollama, see [Local models (Ollama)](#local-models-ollama). Any enabled model can be picked in the header.
 
 | Command | What it does |
 |---|---|
@@ -42,6 +62,8 @@ The default model is Qwen3 8B running locally through Ollama, see [Local models 
 
 ## The score
 
+![Market attractiveness map: countries colored by score, 0–100](docs/map.png)
+
 Four signals. Each one becomes "better than X% of countries", and the score (0–100) is their average:
 
 | Signal | Indicator |
@@ -51,53 +73,11 @@ Four signals. Each one becomes "better than X% of countries", and the score (0�
 | People are online | Internet users, % (`IT.NET.USER.ZS`), latest |
 | Prices are stable | Inflation, 5-year average (`FP.CPI.TOTL.ZG`), lower is better |
 
+It's a first filter, not an answer: four macro indicators say nothing about a specific industry, competition, regulation, taxes or political risk.
+
 Countries with fewer than 3 signals show as gray ("not enough data"). The window ends at the latest year that at least half of the countries have reported. The score uses the frozen snapshot, so the map doesn't change until you run `make data` again. Chat questions call the live World Bank API (with a disk cache).
 
-## What's inside
-
-| Piece | File |
-|---|---|
-| World Bank client: fixed base URL, validated codes, pagination, retries, disk cache | `app/wb.py` |
-| Snapshot of the score indicators + indicator catalog (~1,500 WDI indicators) | `scripts/sync_data.py`, `app/snapshot.py` |
-| Methodology RAG: World Bank documentation passages, Pinecone with metadata filters, cited answers | `app/methodology.py`, `scripts/index_methodology.py` |
-| Full World Bank dataset in SQLite (~9M values): bulk loader, queries, benchmark | `app/warehouse.py`, `scripts/load_wdi.py`, `scripts/bench_wdi.py` |
-| Deterministic metrics and score with plain-language sentences | `app/analytics.py`, `app/scoring.py` |
-| Indicator search (RAG): aliases, then Pinecone semantic search, keyword fallback; retrieval eval | `app/indicators.py`, `app/vectorstore.py`, `scripts/index_indicators.py` |
-| Country groups (EU27, G7, World Bank regions and income levels) | `app/groups.py` |
-| 13 market tools, served over MCP and loaded by the agent with `langchain-mcp-adapters` | `app/tools.py`, `servers/market_server.py`, `app/runtime.py` |
-| MCP SDK compatibility (`FastMCP` in mcp 1.x, renamed `MCPServer` in 2.x) | `servers/_mcp.py` |
-| Web research (Tavily) as a second MCP server: allowlisted domains, redacted queries, untrusted results | `servers/research_server.py`, `app/redact.py` |
-| ⭐ ARIMA forecasts (auto order by AIC, 80/95% ranges) and the Taylor rule (HP-filter output gap) | `app/forecast.py` |
-| LangGraph agent with a hard approval gate and SQLite checkpoints | `app/graph.py`, `app/runtime.py` |
-| Model registry with privacy classes (`strict` / `demo`) | `models.yaml`, `app/llm.py` |
-| Plotly charts built only from stored `data_ref`s | `app/charts.py` |
-| NiceGUI UI: main page (map, country panel, chat with charts, 👍/👎), approval cards, report library, curator page, standalone chart page | `app/ui/` |
-| JSON API and OpenAI-compatible endpoint for Open WebUI | `app/server.py`, `app/openai_compat.py` |
-| LangSmith tracing (run metadata, 👍/👎 as feedback, hidden inputs/outputs in strict mode) | `app/tracing.py` |
-| Learning from feedback: 👎 → proposed alias / eval case → curator approves at `/admin` | `app/feedback.py`, `app/ui/admin.py` |
-| Saved reports with Markdown export rebuilt from stored data | `app/reports.py`, `app/db.py` |
-| Golden evals scored from traces (tools, indicator, countries, safety, citations, number grounding) | `evals/run_evals.py` |
-| Retrieval evals (hit@1, hit@5, MRR) for indicator search and methodology passages | `evals/retrieval.py` |
-| Security: CSRF Origin check, security headers, XSS-safe Markdown, argument validation, parameterized SQL | `app/security.py`, `app/db.py`, `tests/security/` |
-
-### Agent tools
-
-| Tool | Gated | Purpose |
-|---|---|---|
-| `search_indicators` | | Plain language → World Bank indicator codes (semantic search) |
-| `country_groups` | | "EU", "G7", a region or income level → ISO3 codes |
-| `get_series` | | Values by country and year (ISO3, ISO2 or country names); returns a `data_ref` |
-| `rank_countries` | | Rank by latest value, average or change, optionally within a group |
-| `score_markets` | | The attractiveness score above |
-| `search_methodology` | | World Bank documentation passages with citations (definitions, methodology, country notes) |
-| `related_indicators` | | Which of ~1,500 indicators move with this one across countries (scans the full dataset) |
-| `make_chart` | | Line or bar chart from a `data_ref` |
-| `highlight_countries` | | Highlight countries on the map |
-| `forecast_series` | ✅ | ARIMA forecast |
-| `taylor_rule` | ✅ | Implied policy rate |
-| `save_report` | ✅ | Save a report to the library |
-| `list_reports` | | List saved reports |
-| `research_external` | | Tavily search on official domains (research server) |
+Every component and the file it lives in, the 14 agent tools and the HTTP endpoints: [docs/architecture.md](docs/architecture.md).
 
 ## Indicator search (RAG with Pinecone)
 
@@ -164,8 +144,8 @@ Configured in `models.yaml` and selectable in the header:
 | `nemotron-3-super-120b` | OpenRouter (free) | `may_log` | 50 requests/day without credits |
 | `nemotron-3.5-lightning` | OpenRouter (free) | `may_log` | |
 | `gemma-4-31b` | OpenRouter (free) | `may_log` | |
-| `claude-haiku-4.5` | Anthropic | `no_train` | needs `ANTHROPIC_API_KEY` |
-| `local` | Ollama (`qwen3:8b`) | `local` | **default**; runs on your machine, no key, no limits |
+| `claude-haiku-4.5` | Anthropic | `no_train` | **default** when `ANTHROPIC_API_KEY` is set |
+| `local` | Ollama (`qwen3:8b`) | `local` | default without keys; runs on your machine, no limits |
 
 ### Local models (Ollama)
 
@@ -173,9 +153,9 @@ No API key, no daily limits, and nothing leaves your machine, so it's also allow
 
 1. Install [Ollama](https://ollama.com) and start it.
 2. `make ollama` downloads `qwen3:8b` (~5 GB, needs ~8 GB of free RAM).
-3. `make ui`. It's the default model, so the chat uses it right away.
+3. `make ui`. Without cloud keys it's the default model; otherwise pick it in the header.
 
-Expect 20–80 s per question on a laptop (the first one also loads the model). `num_ctx` and `reasoning` in `models.yaml` trade speed for quality: set `reasoning: true` to let qwen3 think before answering. To try another Ollama model, add an entry with `provider: ollama` and a model that supports tool calling. Ollama on another machine or Docker on the same one: set `OLLAMA_BASE_URL`. `make docker` needs it too, since the default model is local: put `OLLAMA_BASE_URL=http://host.docker.internal:11434` in `.env`.
+Expect 20–80 s per question on a laptop (the first one also loads the model). `num_ctx` and `reasoning` in `models.yaml` trade speed for quality: set `reasoning: true` to let qwen3 think before answering. To try another Ollama model, add an entry with `provider: ollama` and a model that supports tool calling. Ollama on another machine or Docker on the same one: set `OLLAMA_BASE_URL`. `make docker` with the local model needs it too: put `OLLAMA_BASE_URL=http://host.docker.internal:11434` in `.env`.
 
 If the chat says "Ollama isn't running" or "isn't downloaded yet", do step 1 or 2.
 
@@ -183,19 +163,7 @@ If the chat says "Ollama isn't running" or "isn't downloaded yet", do step 1 or 
 
 All settings live in `.env` (see `.env.example`). Everything is optional except a model key, and even that isn't needed with a local model. Every variable is listed in [docs/configuration.md](docs/configuration.md).
 
-## HTTP endpoints
-
-| Path | What |
-|---|---|
-| `/` | The app |
-| `/admin` | Curator page (needs `ADMIN_PASSWORD`) |
-| `/chart/<id>` | A single chart (used by Open WebUI replies, `app/ui/chart.py`) |
-| `GET /api/scores` | All scores and ranks for the current snapshot |
-| `GET /api/country/<ISO3>` | One country's score, explained signal by signal |
-| `POST /api/feedback` | 👍/👎 on an answer |
-| `GET /v1/models`, `POST /v1/chat/completions` | OpenAI-compatible API (Bearer `OPENAI_COMPAT_KEY`) |
-
-## ⭐ Starred questions
+## Forecasts
 
 - **ARIMA forecast:** "Make an ARIMA forecast of Ukraine's GDP per capita for the next 10 years". The model order is picked by AIC on log values, and the chart shows 80% and 95% ranges.
 - **Taylor rule:** `i = r* + π + 0.5·(π − π*) + 0.5·gap`, with the output gap from an HP filter on real GDP. The World Bank doesn't publish policy rates, so to compare with the actual NBU rate, add `data/policy_rates/UKR.csv` with columns `year,rate` from official NBU data. The app never invents these numbers. With `TAVILY_API_KEY` set, the agent can also look the rate up on bank.gov.ua, labeled as external and cited.
