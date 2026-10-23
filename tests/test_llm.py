@@ -22,12 +22,12 @@ def test_tracing_is_a_no_op_without_langsmith(monkeypatch):
 def test_default_model_is_the_first_one_with_a_key(monkeypatch):
     from app.llm import pick_default
 
-    candidates = ["claude-haiku-4.5", "nemotron-3-super-120b", "local"]
+    candidates = ["claude-haiku-4.5", "nemotron-3.5-lightning", "local"]
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
     assert pick_default(candidates) == "local"
     monkeypatch.setenv("OPENROUTER_API_KEY", "k")
-    assert pick_default(candidates) == "nemotron-3-super-120b"
+    assert pick_default(candidates) == "nemotron-3.5-lightning"
     monkeypatch.setenv("ANTHROPIC_API_KEY", "k")
     assert pick_default(candidates) == "claude-haiku-4.5"
     assert pick_default(candidates, "strict") == "local"  # cloud models that may keep prompts are skipped
