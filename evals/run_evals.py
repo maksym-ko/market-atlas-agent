@@ -41,25 +41,36 @@ def numbers(text: str) -> list[float]:
     return values
 
 
+def _claims(answer: str) -> list[float]:
+    """Numbers in the answer that state data: years and small counts are skipped."""
+    return [number for number in numbers(answer)
+            if not (number.is_integer() and (1900 <= number <= 2100 or abs(number) <= 31))]
+
+
+def _close(number: float, value: float) -> bool:
+    return abs(number - value) <= max(0.051, abs(value) * 0.005) or abs(abs(number) - abs(value)) <= 0.051
+
+
+def ungrounded(answer: str, tool_texts: list[str]) -> list[float]:
+    """Claims found in no tool output. A claim also counts as grounded when it is a source value rounded to a
+    whole number ("38 %" for 38.2), or the sum or difference of two grounded numbers in the same answer
+    ("up 46.5 points" from 53.4 to 99.9)."""
+    source = numbers(" ".join(tool_texts))
+    claims = _claims(answer)
+
+    def direct(number: float) -> bool:
+        return any(_close(number, value) or (number.is_integer() and number == round(value)) for value in source)
+
+    grounded = [number for number in claims if direct(number)]
+    return [number for number in claims if not direct(number) and not any(
+        _close(abs(number), abs(first - second)) or _close(number, first + second)
+        for index, first in enumerate(grounded) for second in grounded[index + 1:])]
+
+
 def grounding(answer: str, tool_texts: list[str]) -> float:
     """Share of 'real' numbers in the answer that appear in some tool output (within rounding)."""
-    source = numbers(" ".join(tool_texts))
-    claims = [
-        number
-        for number in numbers(answer)
-        if not (number.is_integer() and (1900 <= number <= 2100 or abs(number) <= 31))
-    ]  # skip years, small counts
-    if not claims:
-        return 1.0
-
-    def found(number: float) -> bool:
-        return any(
-            abs(number - source_value) <= max(0.051, abs(source_value) * 0.005)
-            or abs(abs(number) - abs(source_value)) <= 0.051
-            for source_value in source
-        )
-
-    return sum(found(number) for number in claims) / len(claims)
+    claims = _claims(answer)
+    return 1 - len(ungrounded(answer, tool_texts)) / len(claims) if claims else 1.0
 
 
 def citations_ok(answer: str, tool_texts: list[str], required: bool) -> bool:
@@ -81,20 +92,6 @@ def rendered(answer: str, tool_texts: list[str]) -> str:
         if isinstance(data, dict) and data.get("passages"):
             passages = data["passages"]
     return strip_unsourced_links(methodology.link_citations(answer, passages), " ".join(tool_texts))
-
-
-def ungrounded(answer: str, tool_texts: list[str]) -> list[float]:
-    source = numbers(" ".join(tool_texts))
-    return [
-        number
-        for number in numbers(answer)
-        if not (number.is_integer() and (1900 <= number <= 2100 or abs(number) <= 31))
-        and not any(
-            abs(number - source_value) <= max(0.051, abs(source_value) * 0.005)
-            or abs(abs(number) - abs(source_value)) <= 0.051
-            for source_value in source
-        )
-    ]
 
 
 async def run_case(graph, case: dict, model: str) -> dict:

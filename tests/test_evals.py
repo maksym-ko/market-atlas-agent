@@ -26,3 +26,10 @@ def test_answer_is_scored_as_the_user_sees_it():
     answer = rendered("GDP divided by midyear population 【1†L1-L4】. More at https://example.com/x", tools)
     assert f"[1]({url})" in answer and "example.com" not in answer
     assert citations_ok(answer, tools, required=True)
+
+
+def test_grounding_accepts_rounding_and_simple_arithmetic():
+    tools = ['{"values": [[2004, 53.4], [2024, 99.9]], "forest": 38.2}']
+    assert grounding("From 53.4% to 99.9%, up 46.5 points.", tools) == 1.0  # difference of two stated values
+    assert grounding("Forest cover is 38% of land.", tools) == 1.0  # 38.2 rounded
+    assert grounding("Around 70-75% since the 1990s.", tools) == 0.0  # vague ranges are not in the data
