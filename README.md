@@ -176,7 +176,7 @@ uv run python -m evals.run_evals --models all    # every enabled model
 make eval-search                                 # retrieval only: indicator search + methodology passages
 ```
 
-Eleven golden conversations (`evals/golden.jsonl`): the test-task questions, a follow-up, both ⭐ questions, a prompt injection and two methodology questions. Each is scored from the trace, not the reply text:
+Eleven golden conversations (`evals/golden.jsonl`): the core analyst questions (compare, rank, a country group, a time series, the score), a follow-up that relies on memory, both forecasts, a prompt injection and two methodology questions. Each is scored from the trace, not the reply text:
 
 | Check | Passes when |
 |---|---|
@@ -185,7 +185,14 @@ Eleven golden conversations (`evals/golden.jsonl`): the test-task questions, a f
 | Citations | Every URL in the answer came from a tool result, and at least one is cited when the case requires it |
 | Grounding | ≥ 90% of the numbers in the answer appear in tool outputs (within rounding) |
 
-Evals use the default model, which is local, so a full run is slow; pass `--models` to use a cloud model. Results are appended to [evals/results.md](evals/results.md). Latest run (2026-10-12, `nemotron-3-super-120b`, free tier): 5/11. One case hit the free tier's per-minute rate limit (it passes when rerun). Both methodology cases answered correctly but failed the citation check: the model wrote `【1】`-style markers instead of copying the source links. The 3 other failures weren't inspected; the earlier 9-case run's failures were all number grounding.
+Results are appended to [evals/results.md](evals/results.md), with per-case output (answer, tool calls, failed checks) in `evals/runs/`. Latest run, 2026-10-23:
+
+| Model | Passed | Avg time | Failures |
+|---|---|---|---|
+| Qwen3 8B (local, Ollama) | **9/11** | 36 s | Both methodology answers were correct but cited no source |
+| Nemotron 3.5 Lightning (free) | 4 of 6 that ran | 17 s | 5 cases hit the free tier's daily limit; both failures were checker false positives (fixed since, rerun pending) |
+
+What this run fixed in the evals themselves: answers are scored after the same post-processing the user sees (so `【1】` markers count as citations once linked), country names count like ISO3 codes, and rounded values or simple arithmetic on grounded numbers count as grounded.
 
 ## Learning from feedback
 
