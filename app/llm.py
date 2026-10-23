@@ -7,15 +7,30 @@ from langchain.chat_models import init_chat_model
 from app.config import ROOT
 
 REGISTRY = yaml.safe_load((ROOT / "models.yaml").read_text())
-DEFAULT_MODEL = REGISTRY["default"]
 ALLOWED = {"strict": {"zdr", "no_log_no_train", "local"},
            "demo": {"zdr", "no_log_no_train", "local", "no_train", "may_log"}}
+KEYS = {"anthropic": "ANTHROPIC_API_KEY", "openrouter": "OPENROUTER_API_KEY"}  # ollama needs none
 
 
 def enabled_models(privacy_mode: str | None = None) -> dict[str, str]:
     allowed = ALLOWED[privacy_mode or REGISTRY["privacy_mode"]]
     return {model_key: model["label"] for model_key, model in REGISTRY["models"].items()
             if model.get("enabled", True) and model["privacy"] in allowed}
+
+
+def pick_default(candidates: str | list[str], privacy_mode: str | None = None) -> str:
+    """The first candidate that is enabled and has its API key set; a single key is used as is."""
+    if isinstance(candidates, str):
+        return candidates
+    allowed = enabled_models(privacy_mode)
+    for model_key in candidates:
+        key_name = KEYS.get(REGISTRY["models"].get(model_key, {}).get("provider"))
+        if model_key in allowed and (key_name is None or os.getenv(key_name)):
+            return model_key
+    return candidates[-1]
+
+
+DEFAULT_MODEL = pick_default(REGISTRY["default"])
 
 
 @cache

@@ -1,7 +1,8 @@
 # privacy_mode: strict = only models that don't log or train on prompts (zdr, no_log_no_train, local)
 #               demo   = anything (World Bank data is public)
 privacy_mode: demo
-default: local   # runs on this machine via Ollama (`make ollama`); no key, no rate limits
+# the first model whose API key is set (and that privacy_mode allows); local needs no key, so it's the fallback
+default: [claude-haiku-4.5, nemotron-3-super-120b, local]
 models:
   claude-haiku-4.5:
     label: Claude Haiku 4.5
