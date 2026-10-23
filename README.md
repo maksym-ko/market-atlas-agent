@@ -17,7 +17,7 @@ make data                # World Bank snapshot + indicator catalog (~20 s)
 make wdi                 # optional: full World Bank dataset, ~9M values (283 MB download, ~15 s load)
 make index               # optional: upload indicators to Pinecone for semantic search (PINECONE_API_KEY)
 make index-docs          # optional: World Bank methodology passages for chat Q&A (after make wdi)
-make test                # 68 tests, no API calls
+make test                # 69 tests, no API calls
 make ui                  # http://localhost:8080
 ```
 

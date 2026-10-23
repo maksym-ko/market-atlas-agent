@@ -1,5 +1,5 @@
 """Eval checkers: number grounding and citations (evals/run_evals.py)."""
-from evals.run_evals import citations_ok, grounding
+from evals.run_evals import citations_ok, grounding, rendered
 
 
 def test_grounding_checks_numbers_against_tool_output():
@@ -18,3 +18,11 @@ def test_citation_check_rejects_invented_urls():
     assert not citations_ok(good + " See https://example.com/made-up.", tools, required=True)
     assert not citations_ok("No sources given.", tools, required=True)
     assert citations_ok("No sources given.", tools, required=False)
+
+
+def test_answer_is_scored_as_the_user_sees_it():
+    url = "https://data.worldbank.org/indicator/NY.GDP.PCAP.CD"
+    tools = ['{"passages": [{"cite": "[1](%s)", "title": "GDP per capita"}]}' % url]
+    answer = rendered("GDP divided by midyear population 【1†L1-L4】. More at https://example.com/x", tools)
+    assert f"[1]({url})" in answer and "example.com" not in answer
+    assert citations_ok(answer, tools, required=True)

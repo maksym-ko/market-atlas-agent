@@ -17,11 +17,12 @@ from datetime import date
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.types import Command
 
-from app import db, groups, tracing
+from app import db, groups, methodology, tracing
 from app.config import ROOT
 from app.graph import build_graph
 from app.runtime import inproc_tools
 from app.llm import DEFAULT_MODEL, enabled_models
+from app.security import strip_unsourced_links
 
 INDICATOR_TOOLS = {"get_series", "rank_countries", "forecast_series"}
 # thousands separators only in groups of 3 ("12,345"), so "ARIMA(1,1,0)" isn't read as 110
@@ -68,6 +69,20 @@ def citations_ok(answer: str, tool_texts: list[str], required: bool) -> bool:
     return (bool(cited) or not required) and all(url in sources for url in cited)
 
 
+def rendered(answer: str, tool_texts: list[str]) -> str:
+    """The answer as the user sees it: citation markers linked to their passages, unsourced links removed
+    (the same post-processing as the main UI and the OpenAI-compatible endpoint)."""
+    passages = []
+    for text in tool_texts:
+        try:
+            data = json.loads(text)
+        except (json.JSONDecodeError, TypeError):
+            continue
+        if isinstance(data, dict) and data.get("passages"):
+            passages = data["passages"]
+    return strip_unsourced_links(methodology.link_citations(answer, passages), " ".join(tool_texts))
+
+
 def ungrounded(answer: str, tool_texts: list[str]) -> list[float]:
     source = numbers(" ".join(tool_texts))
     return [
@@ -105,9 +120,10 @@ async def run_case(graph, case: dict, model: str) -> dict:
             ]
             calls = turn_calls
             tool_texts = [str(message.content) for message in msgs if message.type == "tool"]
-            answer = next(
+            raw = next(
                 (str(message.content) for message in reversed(msgs) if message.type == "ai" and message.content), ""
             )
+            answer = rendered(raw, tool_texts)
     seconds = time.time() - started
 
     names = {call["name"] for call in calls}
@@ -183,9 +199,15 @@ async def main():
     models = list(enabled_models()) if args.models == "all" else args.models.split(",")
 
     rows = []
+    runs_dir = ROOT / "evals" / "runs"
+    runs_dir.mkdir(exist_ok=True)
     for model in models:
         print(f"\n== {model}")
-        rows.append(summary_row(model, await run_model(model, cases)))
+        results = await run_model(model, cases)
+        rows.append(summary_row(model, results))
+        run_path = runs_dir / f"{date.today()}-{model}.jsonl"
+        run_path.write_text("".join(json.dumps(result, ensure_ascii=False) + "\n" for result in results))
+        print(f"Per-case output: {run_path}")
     columns = ["Model", "Passed", "Tools", "Indicator", "Countries", "Safety", "Citations", "Grounding", "Avg time",
                "Errors"]
     header = "| " + " | ".join(columns) + " |\n" + "|---" * len(columns) + "|"
